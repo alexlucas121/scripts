@@ -1,0 +1,13 @@
+#!/bin/bash
+#Script de Firewall / Regras de Filter
+IPT=$(which iptables)
+DMZ=192.168.200.0/24
+REDE=172.16.1.0/24
+# Cadeia de PRE ROTAMENTO
+##
+# Cadeia de POS ROTEAMENTO
+# Faz mascaramento de SAIDA para REDE
+$IPT -t nat -A POSTROUTING -s $REDE -o eth2 -j SNAT --to 192.168.1.100
+# Faz mascaramento de SAIDA para DMZ
+$IPT -t nat -A POSTROUTING -s $DMZ -o eth2 -j SNAT --to 192.168.1.100
+##

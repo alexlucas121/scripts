@@ -1,0 +1,40 @@
+#!/bin/bash
+# Script de inicializacao do Firewall
+# 
+IPTR=$(which iptables-restore)
+IPT=$(which iptables)
+#
+inicia() {
+	bash /etc/firewall/regras-filter
+	bash /etc/firewall/regras-nat
+	bash /etc/firewall/regras-dmz
+}
+
+fecha() {
+	$IPTR /etc/firewall/limpa-regras
+}
+
+limpa() {
+	$IPT -t nat -F PREROUTING
+	$IPT -t nat -F POSTROUTING
+	$IPT -t mangle -F POSTROUTING
+	$IPT -t mangle -F PREROUTING
+	$IPT -t mangle -F FORWARD
+	$IPT -t mangle -F INPUT
+	$IPT -F INPUT 
+	$IPT -F FORWARD
+	$IPT -P INPUT ACCEPT
+	$IPT -P FORWARD ACCEPT
+}
+
+reincia() {
+	limpa
+	inicia
+}
+case $1 in
+start) inicia ;;
+stop) limpa ;;
+restart) limpa && inicia ;;
+*) echo "Use: /etc/init.d/rc.firewall (start|stop|restart)" ;;
+esac
+

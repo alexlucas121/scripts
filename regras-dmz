@@ -1,0 +1,35 @@
+#!/bin/bash
+#Script de Firewall / Regras de Filter
+IPT=$(which iptables)
+DMZ=192.168.200.0/24
+REDE=172.16.1.0/24
+# Cadeia de FORWARD (filter)
+# Libera acesso ao servidor DNS da DMZ
+$IPT -A FORWARD -p udp -d 192.168.200.20 --dport 53 -j ACCEPT
+# Libera acesso ao servidor WEB(CENTOS)
+$IPT -A FORWARD -p tcp -d 192.168.200.40 --dport 80 -j ACCEPT
+# Libera acesso ao servidor WEB(UBUNTU)
+$IPT -A FORWARD -p tcp -d 192.168.200.30 --dport 80 -j ACCEPT
+# Libera acesso ao servidor WEB(UBUNTU:8000)
+$IPT -A FORWARD -p tcp -d 192.168.200.30 --dport 8000 -j ACCEPT
+##
+
+## Cadeia de PRE ROTAMENTO
+# Redireciona a consulta a porta 53 do FIREWALL(192.168.1.100)  para a porta 53 do DNS da DMZ
+$IPT -t nat -A PREROUTING -p udp -d 192.168.1.100 --dport 53 -j DNAT --to 192.168.200.20:53
+# Redireciona o acesso ao servico HTTP do FIREWALL (192.168.1.101) para o servidor WEB(CENTOS) da DMZ
+$IPT -t nat -A PREROUTING -p tcp -d 192.168.1.101 --dport 80 -j DNAT --to 192.168.200.40:80
+# Redireciona o acesso ao servico HTTP do FIREWALL (192.168.1.102) para o servidor WEB(UBUNTU) da DMZ
+$IPT -t nat -A PREROUTING -p tcp -d 192.168.1.102 --dport 80 -j DNAT --to 192.168.200.30:80
+# Redireciona o acesso ao servico HTTP do FIREWALL (192.168.1.102:8000) para o servidor WEB(UBUNTU:8000) da DMZ
+$IPT -t nat -A PREROUTING -p tcp -d 192.168.1.102 --dport 8000 -j DNAT --to 192.168.200.30:8000
+##
+# Cadeia de POS ROTEAMENTO
+#$IPT -t nat -A POSTROUTING -p udp -s 192.168.200.20 --sport 53 -j SNAT --to 192.168.1.100
+# Faz NAT de SAIDA do SERVIDOR WEB(CENTOS)
+$IPT -t nat -I POSTROUTING -p tcp -s 192.168.200.40 --sport 80 -j SNAT --to 192.168.1.101
+# Faz NAT de SAIDA do SERVIDOR WEB(UBUNTU)
+$IPT -t nat -I POSTROUTING -p tcp -s 192.168.200.30 --sport 80 -j SNAT --to 192.168.1.102
+# Faz NAT de SAIDA do SERVIDOR WEB(UBUNTU)
+$IPT -t nat -I POSTROUTING 2 -p tcp -s 192.168.200.30 --sport 8000 -j SNAT --to 192.168.1.102
+##

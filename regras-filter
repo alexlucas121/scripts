@@ -1,0 +1,30 @@
+#!/bin/bash
+#Script de Firewall / Regras de Filter
+IPT=$(which iptables)
+DMZ=192.168.200.0/24
+REDE=172.16.1.0/24
+# Cadeia de INPUT
+# Libera TODA entrada na interface LOOPBACK
+$IPT -A INPUT -i lo -j ACCEPT
+# Libera TODA comunicacao de RETORNO de uma ORIGINADA no FIREWALL/PROXY
+$IPT -A INPUT -m state --state established,related -j ACCEPT
+# Libera REDE acessar Proxy na porta 3128
+$IPT -A INPUT -p tcp -s $REDE --sport 1025: --dport 3128 -j ACCEPT
+# Libera REDE acessar SSH no FIREWALL
+$IPT -A INPUT -p tcp -s $REDE --sport 1025: --dport 22 -j ACCEPT
+# FECHA TODA CADEIA INPUT
+$IPT -P INPUT DROP
+# Cadeia de FORWARD
+# Libera TODA comunicacao de RETORNO de uma ORIGINADA na REDE/DMZ
+$IPT -A FORWARD -m state --state established,related -j ACCEPT
+# Libera os servidores DNS (INTERNO E SITE) acessar DNS externos
+$IPT -A FORWARD -p udp -s 172.16.1.250 --dport 53 -j ACCEPT
+$IPT -A FORWARD -p udp -s 192.168.200.20 --dport 53 -j ACCEPT
+# Libera REDE para acessar portas de E-MAIL na internet
+$IPT -A FORWARD -p tcp -s $REDE --sport 1025: -m multiport --dports 25,110,143,465,587,993,995 -j ACCEPT
+# Permite ao DNS AD usar o DNS ext como ENCAMINHADOR
+$IPT -A FORWARD -p udp -s 172.16.1.250 -d 192.168.200.20 --dport 53 -j ACCEPT
+# Libera a DMZ acessar porta 80 na internet (UPDATE DE PACOTES)
+$IPT -A FORWARD -p tcp -s $DMZ --dport 80 -j ACCEPT
+# FECHA TODA CADEIA FORWARD
+$IPT -P FORWARD DROP
